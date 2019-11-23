@@ -1,0 +1,14 @@
+<!--index.wxml-->
+<view class="container">
+  <view class="section">
+    <form bindsubmit="bindFormSubmit">
+      <textarea placeholder="Name" name="name"/>
+      <textarea placeholder="Email" name="email"/>
+      <button id="checkIn" form-type="submit"> check in </button>
+    </form>
+    <form bindsubmit="bindFormSubmit2">
+      <textarea placeholder="Name" name="name"/>
+      <button id="checkout" form-type="submit"> check out </button>
+    </form>
+  </view>
+</view>

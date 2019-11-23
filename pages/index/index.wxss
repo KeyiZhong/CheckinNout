@@ -1,0 +1,17 @@
+/**index.wxss**/
+.container{
+  display: flex;
+  justify-content: space-around;
+  align-content: center;
+  flex-direction: column;
+  text-align: center;
+}
+.section {
+  margin: 10px;
+}
+form{
+  margin:10px;
+}
+textarea{
+  height: 30px;
+}
