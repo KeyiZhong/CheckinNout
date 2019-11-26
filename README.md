@@ -12,3 +12,7 @@
 ...
 
 1.2.0 增加tab view，增加自助打卡，增加密码验证，增加查看总时间，使用云开发数据库
+![](/example_pictures/selfCheckIn.png)
+![](/example_pictures/searchTime.png)
+![](/example_pictures/admin.png)
+![](/example_pictures/adminView.png)
