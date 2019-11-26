@@ -2,8 +2,8 @@
 //获取应用实例
 const app = getApp()
 
-const odeLatitude = 47.656396;
-const odeLong = -122.310363;
+const odeLatitude = 47.656;
+const odeLong = -122.310;
 var query = wx.createSelectorQuery();
 
 function checkIn(e) {
@@ -89,22 +89,6 @@ function checkOut(e) {
   }
 }
 
-function checkLocation() {
-  var isODE = false;
-  var tolerance = 0.001;
-  wx.getLocation({
-    success: function (res) {
-      var latitude = res.latitude
-      var longitude = res.longitude
-      if(odeLatitude > latitude - tolerance && odeLatitude < latitude + tolerance && odeLong > longitude - tolerance && odeLong < longitude + tolerance) {
-        isOde = true;
-      }
-    },
-    altitude: false
-  })
-  return isODE;
-}
-
 Page({
   data: {
     userInfo: "",
@@ -114,28 +98,44 @@ Page({
     description: "请注意这是测试版，check in 和check out的时候名字必须完全match，邮箱为optional 可以填也可以不填，之后源表格就会变成只读状态，打卡只可以从这个小程序进行"
   },
   bindFormSubmit:function(e){
-    if(checkLocation()) {
-      wx.request(checkIn(e));
-    }else {
-      wx.showModal({
-        title: '提示',
-        content: '您目前不在ODE',
-        success: function (res) {
+    var tolerance = 0.001;
+    var isODE = wx.getLocation({
+      success: function (res) {
+        var latitude = res.latitude
+        var longitude = res.longitude
+        if (odeLatitude > latitude - tolerance && odeLatitude < latitude + tolerance && odeLong > longitude - tolerance && odeLong < longitude + tolerance) {
+          wx.request(checkIn(e));
+        } else {
+          wx.showModal({
+            title: '提示',
+            content: '您目前不在ODE',
+            success: function (res) {
+            }
+          })
         }
-      })
-    }
+      },
+      altitude: false
+    })
   },
   bindFormSubmit2: function (e) {
-    if (checkLocation()) {
-      wx.request(checkOut(e));
-    } else {
-      wx.showModal({
-        title: '提示',
-        content: '您目前不在ODE',
-        success: function (res) {
+    var tolerance = 0.001;
+    var isODE = wx.getLocation({
+      success: function (res) {
+        var latitude = res.latitude
+        var longitude = res.longitude
+        if (odeLatitude > latitude - tolerance && odeLatitude < latitude + tolerance && odeLong > longitude - tolerance && odeLong < longitude + tolerance) {
+          wx.request(checkOut(e));
+        }else {
+          wx.showModal({
+            title: '提示',
+            content: '您目前不在ODE',
+            success: function (res) {
+            }
+          })
         }
-      })
-    }
+      },
+      altitude: false
+    })
   },
   onLoad: function () {
     wx.showToast({
