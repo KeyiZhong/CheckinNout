@@ -4,8 +4,14 @@ const app = getApp()
 
 const odeLatitude = 47.656;
 const odeLong = -122.310;
+const tolerance = 0.001;
+const dbName = 'check_in_check_out'
+wx.cloud.init()
+const db = wx.cloud.database()
+const _ = db.command
 var query = wx.createSelectorQuery();
 
+// not used
 function checkIn(e) {
   return {
     url: "https://script.google.com/macros/s/AKfycbxX2XKX1Ajar6kSje2rmfgpIOpjH_na9d3_Yrm4h_PHF2Dj0RU/exec",
@@ -48,7 +54,7 @@ function checkIn(e) {
   }
 }
 
-
+// not used
 function checkOut(e) {
   return {
     url: "https://script.google.com/macros/s/AKfycbxX2XKX1Ajar6kSje2rmfgpIOpjH_na9d3_Yrm4h_PHF2Dj0RU/exec",
@@ -89,6 +95,125 @@ function checkOut(e) {
   }
 }
 
+function notOde() {
+  wx.showModal({
+    title: '提示',
+    content: '您目前不在ODE',
+    success: function (res) {
+    }
+  })
+}
+
+function nameCannotBlank() {
+  wx.showModal({
+    title: '提示',
+    content: 'Name cannot be Blank',
+    success: function (res) {
+    }
+  })
+}
+
+function cannotGetLocation() {
+  wx.showModal({
+    title: '提示',
+    content: 'Cannot get your location',
+    success: function (res) {
+    }
+  })
+}
+
+function addCheckinData(e) {
+  db.collection(dbName).add({
+    data: {
+      name: e.detail.value.name.toLowerCase(),
+      email: e.detail.value.email,
+      date: new Date().toLocaleDateString(),
+      checkInTime: new Date().toString(),
+      checkOutTime: "",
+      studyTime: 30
+    },
+    success: function (res) {
+      wx.showToast({
+        title: 'Checked In',
+        icon: 'success',
+        duration: 2000
+      })
+    }
+  })
+}
+
+function addCheckoutData(e,id,checkInTime) {
+  var start = new Date(checkInTime)
+  var end = new Date()
+  var study = Math.floor((end - start)/60000)
+  db.collection(dbName).doc(id).
+  update({
+    data:{
+      checkOutTime: end,
+      studyTime: study
+    },
+    success: function (res) {
+      wx.showToast({
+        title: 'Checked Out',
+        icon: 'success',
+        duration: 2000
+      })
+    }
+  })
+}
+
+function submitCheckIn(e) {
+  db.collection(dbName).where({
+    name: e.detail.value.name.toLowerCase(),
+    date: new Date().toLocaleDateString(),
+    checkOutTime: ""
+  }).get({
+    success: function (res) {
+      if(res.data.length == 0) {
+        addCheckinData(e)
+      }else {
+        wx.showModal({
+          title: '提示',
+          content: 'Already checked in'
+        })
+      }
+    },
+    fail: function (res) {
+      wx.showModal({
+        title: '提示',
+        content: res.errMsg
+      })
+    }
+  })
+}
+
+function submitCheckOut(e) {
+  db.collection(dbName).where({
+    name: e.detail.value.name.toLowerCase(),
+    date: new Date().toLocaleDateString(),
+    checkOutTime: ""
+  }).get({
+    success: function (res) {
+      if (res.data.length == 0){
+        wx.showModal({
+          title: '提示',
+          content: 'Already checked out or not check in'
+        })
+      }else {
+        var id = res.data[res.data.length - 1]._id
+        var checkInTime = res.data[res.data.length - 1].checkInTime
+        addCheckoutData(e,id,checkInTime);
+      }
+    },
+    fail: function(res) {
+      wx.showModal({
+        title: '提示',
+        content: res.errMsg
+      })
+    }
+  })
+}
+
 Page({
   data: {
     userInfo: "",
@@ -98,43 +223,52 @@ Page({
     description: "请注意这是测试版，check in 和check out的时候名字必须完全match，邮箱为optional 可以填也可以不填，之后源表格就会变成只读状态，打卡只可以从这个小程序进行"
   },
   bindFormSubmit:function(e){
-    var tolerance = 0.001;
     var isODE = wx.getLocation({
       success: function (res) {
         var latitude = res.latitude
         var longitude = res.longitude
         if (odeLatitude > latitude - tolerance && odeLatitude < latitude + tolerance && odeLong > longitude - tolerance && odeLong < longitude + tolerance) {
-          wx.request(checkIn(e));
+          if (e.detail.value.name == "") {
+            nameCannotBlank()
+          } else {
+            submitCheckIn(e)
+            // wx.request(checkIn(e))
+          }
         } else {
-          wx.showModal({
-            title: '提示',
-            content: '您目前不在ODE',
-            success: function (res) {
-            }
-          })
+          notOde()
         }
       },
-      altitude: false
+      altitude: false,
+      fail: function(res) {
+        cannotGetLocation();
+      }
     })
   },
   bindFormSubmit2: function (e) {
-    var tolerance = 0.001;
     var isODE = wx.getLocation({
       success: function (res) {
         var latitude = res.latitude
         var longitude = res.longitude
         if (odeLatitude > latitude - tolerance && odeLatitude < latitude + tolerance && odeLong > longitude - tolerance && odeLong < longitude + tolerance) {
-          wx.request(checkOut(e));
+          if (e.detail.value.name == "") {
+            nameCannotBlank()
+          } else {
+            submitCheckOut(e)
+            // wx.request(checkOut(e))
+          }
         }else {
-          wx.showModal({
-            title: '提示',
-            content: '您目前不在ODE',
-            success: function (res) {
-            }
-          })
+          notOde()
         }
       },
-      altitude: false
+      altitude: false,
+      fail: function (res) {
+        cannotGetLocation();
+      }
+    })
+  },
+  switchTo: function() {
+    wx.navigateTo({
+      url: '../record/record',
     })
   },
   onLoad: function () {
@@ -167,7 +301,6 @@ Page({
     }
   },
   getUserInfo: function(e) {
-    console.log(e)
     app.globalData.userInfo = e.detail.userInfo
     this.setData({
       userInfo: e.detail.userInfo,

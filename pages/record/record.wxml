@@ -1,0 +1,13 @@
+<!--pages/record/record.wxml-->
+<view class="container">
+  <view class="title">
+    <view>{{title}}</view>
+    <view class="description">{{description}}</view>
+  </view>
+  <view class="section">
+    <form bindsubmit="check">
+      <textarea placeholder="Name" name="name"/>
+      <button id="check" form-type="submit" open-type="getUserInfo"> <span>check time</span> </button>
+    </form>
+  </view>
+</view>

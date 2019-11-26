@@ -1,0 +1,35 @@
+/* pages/record/record.wxss */
+.container{
+  display: flex;
+  justify-content: space-around;
+  align-content: center;
+  flex-direction: column;
+  text-align: center;
+  padding: 0px;
+  font-family: Arial, Helvetica, sans-serif;
+}
+.section {
+  margin: 10px;
+}
+form{
+  margin:10px;
+}
+textarea{
+  height: 30px;
+}
+.description{
+  font-size: 10px;
+}
+.title{
+  padding: 30px;
+}
+/* button{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 150px;
+  width: 150px;
+  border: solid, green, 3px;
+  border-radius: 50%;
+  background-color: green;
+} */

@@ -14,5 +14,6 @@
       <textarea placeholder="Name" name="name"/>
       <button id="checkout" form-type="submit" open-type="getUserInfo"> check out </button>
     </form>
+    <button bindtap="switchTo">View Record</button>
   </view>
 </view>
