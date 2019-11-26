@@ -9,6 +9,7 @@ const dbName = 'check_in_check_out'
 wx.cloud.init()
 const db = wx.cloud.database()
 const _ = db.command
+const correct = "xbgscta"
 var query = wx.createSelectorQuery();
 
 // not used
@@ -104,10 +105,10 @@ function notOde() {
   })
 }
 
-function nameCannotBlank() {
+function nameCannotBlank(s) {
   wx.showModal({
     title: '提示',
-    content: 'Name cannot be Blank',
+    content: s,
     success: function (res) {
     }
   })
@@ -122,11 +123,11 @@ function cannotGetLocation() {
   })
 }
 
-function addCheckinData(e) {
+function addCheckinData(name, email) {
   db.collection(dbName).add({
     data: {
-      name: e.detail.value.name.toLowerCase(),
-      email: e.detail.value.email,
+      name: name,
+      email: email,
       date: new Date().toLocaleDateString(),
       checkInTime: new Date().toString(),
       checkOutTime: "",
@@ -142,7 +143,7 @@ function addCheckinData(e) {
   })
 }
 
-function addCheckoutData(e,id,checkInTime) {
+function addCheckoutData(id,checkInTime) {
   var start = new Date(checkInTime)
   var end = new Date()
   var study = Math.floor((end - start)/60000)
@@ -162,15 +163,15 @@ function addCheckoutData(e,id,checkInTime) {
   })
 }
 
-function submitCheckIn(e) {
+function submitCheckIn(name, email) {
   db.collection(dbName).where({
-    name: e.detail.value.name.toLowerCase(),
+    name: name,
     date: new Date().toLocaleDateString(),
     checkOutTime: ""
   }).get({
     success: function (res) {
       if(res.data.length == 0) {
-        addCheckinData(e)
+        addCheckinData(name, email)
       }else {
         wx.showModal({
           title: '提示',
@@ -187,9 +188,9 @@ function submitCheckIn(e) {
   })
 }
 
-function submitCheckOut(e) {
+function submitCheckOut(name) {
   db.collection(dbName).where({
-    name: e.detail.value.name.toLowerCase(),
+    name: name,
     date: new Date().toLocaleDateString(),
     checkOutTime: ""
   }).get({
@@ -202,10 +203,82 @@ function submitCheckOut(e) {
       }else {
         var id = res.data[res.data.length - 1]._id
         var checkInTime = res.data[res.data.length - 1].checkInTime
-        addCheckoutData(e,id,checkInTime);
+        addCheckoutData(id,checkInTime);
       }
     },
     fail: function(res) {
+      wx.showModal({
+        title: '提示',
+        content: res.errMsg
+      })
+    }
+  })
+}
+
+function submitSelfCheckIn(name) {
+  db.collection(dbName).where({
+    nickname: name,
+    date: new Date().toLocaleDateString(),
+    checkOutTime: ""
+  }).get({
+    success: function (res) {
+      if (res.data.length == 0) {
+        addSelfCheckinData(name)
+      } else {
+        wx.showModal({
+          title: '提示',
+          content: 'Already checked in'
+        })
+      }
+    },
+    fail: function (res) {
+      wx.showModal({
+        title: '提示',
+        content: res.errMsg
+      })
+    }
+  })
+}
+
+function addSelfCheckinData(name, email) {
+  db.collection(dbName).add({
+    data: {
+      nickname: name,
+      email: email,
+      date: new Date().toLocaleDateString(),
+      checkInTime: new Date().toString(),
+      checkOutTime: "",
+      studyTime: 30
+    },
+    success: function (res) {
+      wx.showToast({
+        title: 'Checked In',
+        icon: 'success',
+        duration: 2000
+      })
+    }
+  })
+}
+
+function submitSelfCheckOut(name) {
+  db.collection(dbName).where({
+    nickname: name,
+    date: new Date().toLocaleDateString(),
+    checkOutTime: ""
+  }).get({
+    success: function (res) {
+      if (res.data.length == 0) {
+        wx.showModal({
+          title: '提示',
+          content: 'Already checked out or not check in'
+        })
+      } else {
+        var id = res.data[res.data.length - 1]._id
+        var checkInTime = res.data[res.data.length - 1].checkInTime
+        addCheckoutData(id, checkInTime);
+      }
+    },
+    fail: function (res) {
       wx.showModal({
         title: '提示',
         content: res.errMsg
@@ -220,10 +293,96 @@ Page({
     hasUserInfo: false,
     canIUse: wx.canIUse('button.open-type.getUserInfo'),
     title:"UWCTA 自习打卡",
-    description: "请注意这是测试版，check in 和check out的时候名字必须完全match，邮箱为optional 可以填也可以不填，之后源表格就会变成只读状态，打卡只可以从这个小程序进行"
+    description: "请注意这是测试版，check in 和check out的时候名字必须完全match，邮箱为optional 可以填也可以不填，之后源表格就会变成只读状态，打卡只可以从这个小程序进行",
+    currentTab: 0,
+    pass:false,
+    passwords:""
+  },
+  selfCheckIn:function(e) {
+    var name = app.globalData.userInfo.nickname
+    wx.getLocation({
+      success: function (res) {
+        var latitude = res.latitude
+        var longitude = res.longitude
+        if (odeLatitude > latitude - tolerance && odeLatitude < latitude + tolerance && odeLong > longitude - tolerance && odeLong < longitude + tolerance) {
+          if (name == "") {
+            nameCannotBlank("Name cannot be Blank")
+          } else {
+            submitSelfCheckIn(name)
+            // wx.request(checkOut(e))
+          }
+        } else {
+          notOde()
+        }
+      },
+      altitude: false,
+      fail: function (res) {
+        cannotGetLocation();
+      }
+    })
+  },
+  selfCheckOut: function (e) {
+    var name = app.globalData.userInfo.nickname
+    wx.getLocation({
+      success: function (res) {
+        var latitude = res.latitude
+        var longitude = res.longitude
+        if (odeLatitude > latitude - tolerance && odeLatitude < latitude + tolerance && odeLong > longitude - tolerance && odeLong < longitude + tolerance) {
+          if (name == "") {
+            nameCannotBlank("Name cannot be Blank")
+          } else {
+            submitSelfCheckOut(name)
+            // wx.request(checkOut(e))
+          }
+        } else {
+          notOde()
+        }
+      },
+      altitude: false,
+      fail: function (res) {
+        cannotGetLocation();
+      }
+    })
+  },
+  submitPass:function(e) {
+    this.setData({
+      pass:this.data.passwords == correct
+    })
+  }, 
+  getPassword: function (e) {
+    this.setData({
+      passwords: e.detail.value
+    })
+  },
+  clickTab: function (e) {
+    var that = this;
+    if (this.data.currentTab === e.target.dataset.current) {
+      return false;
+    } else {
+      that.setData({
+        currentTab: e.target.dataset.current
+      })
+    }
+  },
+  check: function (e) {
+    var searchName = e.detail.value.name
+    db.collection(dbName).where({
+      name: searchName
+    }).get({
+      success: function (res) {
+        var total = 0
+        for (var i = 0; i < res.data.length; i++) {
+          total += res.data[i].studyTime
+        }
+        wx.showModal({
+          title: 'Total study time',
+          content: total + " minutes",
+        })
+      }
+    })
   },
   bindFormSubmit:function(e){
-    var isODE = wx.getLocation({
+    wx.getLocation({
       success: function (res) {
         var latitude = res.latitude
         var longitude = res.longitude
@@ -231,7 +390,7 @@ Page({
           if (e.detail.value.name == "") {
             nameCannotBlank()
           } else {
-            submitCheckIn(e)
+            submitCheckIn(e.detail.value.name.toLowerCase(), e.detail.value.email)
             // wx.request(checkIn(e))
           }
         } else {
@@ -245,7 +404,7 @@ Page({
     })
   },
   bindFormSubmit2: function (e) {
-    var isODE = wx.getLocation({
+    wx.getLocation({
       success: function (res) {
         var latitude = res.latitude
         var longitude = res.longitude
@@ -253,7 +412,7 @@ Page({
           if (e.detail.value.name == "") {
             nameCannotBlank()
           } else {
-            submitCheckOut(e)
+            submitCheckOut(e.detail.value.name.toLowerCase())
             // wx.request(checkOut(e))
           }
         }else {
@@ -264,11 +423,6 @@ Page({
       fail: function (res) {
         cannotGetLocation();
       }
-    })
-  },
-  switchTo: function() {
-    wx.navigateTo({
-      url: '../record/record',
     })
   },
   onLoad: function () {

@@ -1,7 +1,7 @@
 /**index.wxss**/
 .container{
   display: flex;
-  justify-content: space-around;
+  justify-content: center;
   align-content: center;
   flex-direction: column;
   text-align: center;
@@ -22,4 +22,48 @@ textarea{
 }
 .title{
   padding: 30px;
+}
+
+.swiper-tab{
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  border-top: 2rpx solid #ccc;
+  text-align: center;
+  height: 88rpx;
+  line-height: 88rpx;
+  display: flex;
+  flex-flow: row;
+  justify-content: space-between;
+}
+.swiper-tab-item{
+    width: 30%; 
+    color:#434343;
+}
+.active{
+    color:#F65959;
+    border-top: 4rpx solid #F65959;
+}
+swiper{
+  text-align: center;
+}
+.hidden {
+  display: none;
+}
+.button-hover {
+  background-color: lightgrey;
+}
+.selfcheck {
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+}
+.selfcheck button {
+  border-radius: 50%;
+}
+#selfcheckin{
+  background-color: red;
+}
+#selfcheckout{
+  background-color: yellowgreen;
 }
