@@ -1,0 +1,20 @@
+<!--index.wxml-->
+<view class="{{!hasUserInfo ?'':'hidden'}}">
+  <view class="userInfo">
+    <open-data class="userinfo-avatar" type="userAvatarUrl"></open-data>
+    <open-data type="userNickName"></open-data>
+    <button wx:if="{{canIUse}}" class="{{canIUse&&!hasUserInfo ?'':'hidden'}}" open-type="getUserInfo" bindgetuserinfo="getUserInfo"> 获取头像昵称 </button>
+    <view wx:else>请升级微信版本</view>
+  </view>
+</view>
+<view class="container {{!hasUserInfo && canIUse ? 'hidden':''}}">
+  <view class="title">
+    <view>{{title}}</view>
+    <view class="description"> Hello {{userNickName}}</view>
+  </view>
+  <image class="userinfo-avatar" src="{{userInfo.avatarUrl}}" mode="cover"></image>
+  <view class="selfcheck">
+    <button id="selfcheckin" bindtap="selfCheckIn" open-type="getUserInfo" hover-class="button-hover"><span>Check In</span></button>
+    <button id="selfcheckout" bindtap="selfCheckOut" open-type="getUserInfo" hover-class="button-hover">Check Out</button>
+  </view>
+</view>

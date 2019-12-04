@@ -1,0 +1,19 @@
+<view class="title">
+    <view>{{title}}</view>
+    <view class="description">{{description}}</view>
+</view>
+<view class="container">
+  <view class="password {{pass?'hidden':''}} checkin">
+    <view>{{password}}</view>
+    <input bindinput="getPassword" type="password" placeholder="Admin Pass" ></input>
+    <button bindtap="submitPass" hover-class="button-hover">Submit</button>
+  </view>
+  <view class="{{pass?'':'hidden'}} checkin">
+    <view class="section">
+      <input bindinput="getName" type="text" placeholder="Name" ></input>
+      <input bindinput="getEmail" type="text" placeholder="Email" ></input>
+      <button bindtap="checkIn" form-type="submit" open-type="getUserInfo" hover-class="button-hover"> check in </button>
+      <button bindtap="checkOut" form-type="submit" open-type="getUserInfo" hover-class="button-hover"> check out </button>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,45 @@
+page{
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.container{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+  padding: 0px;
+  font-family: Arial, Helvetica, sans-serif;
+}
+.description{
+  font-size: 20px;
+}
+.title{
+  padding: 30px;
+}
+.hidden {
+  display: none;
+}
+.button-hover {
+  background-color: lightgrey;
+}
+.userinfo-avatar{
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+}
+.userInfo{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+  padding: 0px;
+  font-family: Arial, Helvetica, sans-serif;
+}
+image{
+  border: solid 5px lightgrey;
+  margin-bottom: 50px;
+}
