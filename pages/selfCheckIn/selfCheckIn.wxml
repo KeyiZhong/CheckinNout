@@ -10,6 +10,7 @@
 <view class="container {{!hasUserInfo && canIUse ? 'hidden':''}}">
   <view class="title">
     <view>{{title}}</view>
+    <view class="{{today ? '':'hidden'}}">今天已打卡</view>
     <view class="description"> Hello {{userNickName}}</view>
   </view>
   <image class="userinfo-avatar" src="{{userInfo.avatarUrl}}" mode="cover"></image>

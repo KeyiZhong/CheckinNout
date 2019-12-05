@@ -4,13 +4,13 @@ const app = getApp()
 
 const odeLatitude = 47.656;
 const odeLong = -122.310;
-const tolerance = 0.001;
+const tolerance = 10.001;
 const dbName = 'check_in_check_out'
 wx.cloud.init()
 const db = wx.cloud.database()
 const _ = db.command
 
-const timeGap = 5000
+const timeGap = 3000
 
 
 function showModal(s) {
@@ -22,26 +22,7 @@ function showModal(s) {
   })
 }
 
-function addCheckoutData(id, checkInTime) {
-  var start = new Date(checkInTime)
-  var end = new Date()
-  var study = Math.floor((end - start) / 60000)
-  db.collection(dbName).doc(id).
-    update({
-      data: {
-        checkOutTime: end,
-        studyTime: study
-      },
-      success: function (res) {
-        showModal(name + " Check out succeeded")
-      },
-      fail: function (res) {
-        showModal(name + " Check out failed")
-      }
-    })
-}
-
-function submitSelfCheckIn(name) {
+function submitSelfCheckIn(name, that) {
   db.collection(dbName).where({
     name: name,
     date: new Date().toLocaleDateString(),
@@ -49,7 +30,7 @@ function submitSelfCheckIn(name) {
   }).get({
     success: function (res) {
       if (res.data.length == 0) {
-        addSelfCheckinData(name)
+        addSelfCheckinData(name, that)
       } else {
         wx.showModal({
           title: '提示',
@@ -66,17 +47,20 @@ function submitSelfCheckIn(name) {
   })
 }
 
-function addSelfCheckinData(name) {
+function addSelfCheckinData(name, that) {
   db.collection(dbName).add({
     data: {
       name: name,
       date: new Date().toLocaleDateString(),
-      checkInTime: new Date().toString(),
+      checkInTime: new Date().toLocaleString(),
       checkOutTime: "",
       studyTime: 30
     },
     success: function (res) {
       showModal(name + " Check in succeeded")
+      that.setData({
+        today:true
+      })
     },
     fail: function (res) {
       showModal(name + " Check in failed")
@@ -87,19 +71,24 @@ function addSelfCheckinData(name) {
 function submitSelfCheckOut(name) {
   db.collection(dbName).where({
     name: name,
-    date: new Date().toLocaleDateString(),
     checkOutTime: ""
   }).get({
     success: function (res) {
-      if (res.data.length == 0) {
-        wx.showModal({
-          title: '提示',
-          content: 'Already checked out or not check in'
-        })
-      } else {
+      if(res.data.length === 0) {
+        showModal(name + ' not check in');
+      }else {
+        var lastCheckIn = res.data[res.data.length - 1].checkInTime
+        var lastCheckInDate = new Date(lastCheckIn)
         var id = res.data[res.data.length - 1]._id
-        var checkInTime = res.data[res.data.length - 1].checkInTime
-        addCheckoutData(id, checkInTime);
+        // 如果上次没checkout并且上一次是今天checkin 或 昨天checkin但是今天还没过六点
+        if (res.data[res.data.length - 1].checkOutTime === "" &&
+          (lastCheckInDate.toDateString() === new Date().toDateString()
+          || (lastCheckInDate.getMonth() === new Date().getMonth() && 
+          new Date().getHours() <= 6 && lastCheckInDate.getHours() >= 6))) {
+          addCheckoutData(name, id, lastCheckIn);
+        }else {
+          showModal(name + ' already checked out or not check in');
+        }
       }
     },
     fail: function (res) {
@@ -109,6 +98,25 @@ function submitSelfCheckOut(name) {
       })
     }
   })
+}
+
+function addCheckoutData(name, id, checkInTime) {
+  var start = new Date(checkInTime)
+  var end = new Date()
+  var study = Math.floor((end - start) / 60000)
+  db.collection(dbName).doc(id).
+    update({
+      data: {
+        checkOutTime: end.toLocaleString(),
+        studyTime: study
+      },
+      success: function (res) {
+        showModal(name + " Check out succeeded")
+      },
+      fail: function (res) {
+        showModal(name + " Check out failed")
+      }
+    })
 }
 
 function throttle(func, gapTime) {
@@ -132,7 +140,7 @@ var selfCheckIn = function(that) {
         if (name == "") {
           showModal("Please wait a moment and try again")
         } else {
-          submitSelfCheckIn(name)
+          submitSelfCheckIn(name,that)
           // wx.request(checkOut(e))
         }
       } else {
@@ -176,7 +184,8 @@ Page({
     hasUserInfo: false,
     canIUse: wx.canIUse('button.open-type.getUserInfo'),
     userNickName:"",
-    title: "UWCTA 自习打卡"
+    title: "UWCTA 自习打卡",
+    today: false
   },
   selfCheckIn: throttle(selfCheckIn,timeGap),
   selfCheckOut: throttle(selfCheckOut, timeGap),
@@ -197,6 +206,17 @@ Page({
           userInfo: res.userInfo,
           hasUserInfo: true,
           userNickName: res.userInfo.nickName
+        })
+        let that = this
+        db.collection(dbName).where({
+          name: res.userInfo.nickName,
+          date: new Date().toLocaleDateString()
+        }).get({
+          success: function (res) {
+            that.setData({
+              today: true
+            })
+          }
         })
       }
     } else {

@@ -43,22 +43,27 @@ function addCheckinData(name, email,admin) {
   })
 }
 
-function submitCheckOut(name, nickname) {
+function submitCheckOut(name, admin) {
   db.collection(dbName).where({
     name: name,
-    date: new Date().toLocaleDateString(),
     checkOutTime: ""
   }).get({
     success: function (res) {
-      if (res.data.length == 0) {
-        wx.showModal({
-          title: '提示',
-          content: 'Already checked out or not check in'
-        })
+      if (res.data.length === 0) {
+        showModal(name + ' not check in');
       } else {
+        var lastCheckIn = res.data[res.data.length - 1].checkInTime
+        var lastCheckInDate = new Date(lastCheckIn)
         var id = res.data[res.data.length - 1]._id
-        var checkInTime = res.data[res.data.length - 1].checkInTime
-        addCheckoutData(id, checkInTime, nickname);
+        // 如果上次没checkout并且上一次是今天checkin 或 昨天checkin但是今天还没过六点
+        if (res.data[res.data.length - 1].checkOutTime === "" &&
+          (lastCheckInDate.toDateString() === new Date().toDateString()
+            || (lastCheckInDate.getMonth() === new Date().getMonth() &&
+              new Date().getHours() <= 6 && lastCheckInDate.getHours() >= 6))) {
+          addCheckoutData(name, id, lastCheckIn, admin);
+        } else {
+          showModal(name + ' already checked out or not check in');
+        }
       }
     },
     fail: function (res) {
@@ -70,7 +75,7 @@ function submitCheckOut(name, nickname) {
   })
 }
 
-function addCheckoutData(id, checkInTime, admin) {
+function addCheckoutData(name, id, checkInTime, admin) {
   var start = new Date(checkInTime)
   var end = new Date()
   var study = Math.floor((end - start) / 60000)
@@ -82,10 +87,10 @@ function addCheckoutData(id, checkInTime, admin) {
         checkOutAdmin: admin
       },
       success: function (res) {
-        showModal("Check out succeeded")
+        showModal(name + " Check out succeeded")
       },
       fail: function (res) {
-        showModal("Check out failed")
+        showModal(name + " Check out failed")
       }
     })
 }
