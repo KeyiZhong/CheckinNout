@@ -11,6 +11,8 @@ const db = wx.cloud.database()
 const _ = db.command
 const correct = "xbgscta"
 
+const MILL_IN_A_DAY = 86400000
+
 const timeGap = 5000
 
 function showModal(s) {
@@ -22,44 +24,64 @@ function showModal(s) {
   })
 }
 
-function addCheckinData(name, email,admin) {
+function submitCheckIn(name, email, admin) {
+  db.collection(dbName).where({
+    name: name,
+    checkOutTime: ""
+  }).get({
+    success: function (res) {
+      if(res.data.length > 0) {
+        var lastCheckIn = res.data[res.data.length - 1].checkInTime
+        var lastCheckInDate = res.data[res.data.length - 1].date
+        if (checkInTimeLegal(lastCheckIn, lastCheckInDate)) {
+          addCheckinData(name, email, admin)
+        } else {
+          showModal(name + ' already Check in')
+        }
+      }else {
+        addCheckinData(name, email, admin)
+      }
+    },
+    fail: function (res) {
+      showModal(res.errMsg)
+    }
+  })
+}
+
+function addCheckinData(name, email, admin) {
   db.collection(dbName).add({
     data: {
       name: name,
       email: email,
-      date: new Date().toLocaleDateString(),
-      checkInTime: new Date().toString(),
+      date: new Date().toShortFormat(),
+      checkInTime: new Date(),
       checkOutTime: "",
       studyTime: 30,
       checkInAdmin: admin,
       checkOutAdmin: ""
     },
     success: function (res) {
-      showModal("Check in succeeded")
+      showModal(name + " check in succeeded")
     },
-    fail: function(res) {
-      showModal("Check in failed")
+    fail: function (res) {
+      showModal(name + " check in failed")
     }
   })
 }
 
 function submitCheckOut(name, admin) {
   db.collection(dbName).where({
-    name: name,
-    checkOutTime: ""
+    name: name
   }).get({
     success: function (res) {
       if (res.data.length === 0) {
         showModal(name + ' not check in');
       } else {
         var lastCheckIn = res.data[res.data.length - 1].checkInTime
-        var lastCheckInDate = new Date(lastCheckIn)
+        var lastCheckInDate = res.data[res.data.length - 1].date
+        var checkOutTime = res.data[res.data.length - 1].checkOutTime
         var id = res.data[res.data.length - 1]._id
-        // 如果上次没checkout并且上一次是今天checkin 或 昨天checkin但是今天还没过六点
-        if (res.data[res.data.length - 1].checkOutTime === "" &&
-          (lastCheckInDate.toDateString() === new Date().toDateString()
-            || (lastCheckInDate.getMonth() === new Date().getMonth() &&
-              new Date().getHours() <= 6 && lastCheckInDate.getHours() >= 6))) {
+        if (checkOutTimeLegal(checkOutTime, lastCheckIn, lastCheckInDate)) {
           addCheckoutData(name, id, lastCheckIn, admin);
         } else {
           showModal(name + ' already checked out or not check in');
@@ -76,7 +98,7 @@ function submitCheckOut(name, admin) {
 }
 
 function addCheckoutData(name, id, checkInTime, admin) {
-  var start = new Date(checkInTime)
+  var start = checkInTime
   var end = new Date()
   var study = Math.floor((end - start) / 60000)
   db.collection(dbName).doc(id).
@@ -87,31 +109,23 @@ function addCheckoutData(name, id, checkInTime, admin) {
         checkOutAdmin: admin
       },
       success: function (res) {
-        showModal(name + " Check out succeeded")
+        showModal(name + " check out succeeded")
       },
       fail: function (res) {
-        showModal(name + " Check out failed")
+        showModal(name + " check out failed")
       }
     })
 }
 
-function submitCheckIn(name, email, admin) {
-  db.collection(dbName).where({
-    name: name,
-    date: new Date().toLocaleDateString(),
-    checkOutTime: ""
-  }).get({
-    success: function (res) {
-      if (res.data.length == 0) {
-        addCheckinData(name, email, admin)
-      } else {
-        showModal('Already Check in')
-      }
-    },
-    fail: function (res) {
-      showModal(res.errMsg)
-    }
-  })
+// 如果现在在六点以后且上次没checkout的时间在六点以前，或者如果现在在六点以前且上次没checkout的时间在昨天六点以前
+function checkInTimeLegal(lastCheckIn, lastCheckInDate) {
+  return (new Date().getHours() >= 6 && lastCheckIn.getHours() <= 6) || (new Date().getHours() <= 6 && lastCheckIn.getHours() <= 6 && new Date(new Date().toDateString()) - new Date(lastCheckInDate) >= MILL_IN_A_DAY)
+}
+
+// 如果上次没checkout并且上一次是今天checkin 或 昨天checkin但是今天还没过六点
+function checkOutTimeLegal(checkOutTime, lastCheckIn, lastCheckInDate) {
+  return checkOutTime === "" &&
+    (lastCheckIn.toShortFormat() === new Date().toShortFormat() || (new Date(new Date().toDateString()) - new Date(lastCheckInDate) === MILL_IN_A_DAY && new Date().getHours() <= 6 && lastCheckIn.getHours() >= 6))
 }
 
 function throttle(func, gapTime) {
@@ -182,13 +196,22 @@ var checkOut = function (that) {
   })
 }
 
+Date.prototype.toShortFormat = function () {
+
+  var day = this.getDate();
+  var month = this.getMonth() + 1;
+  var year = this.getFullYear();
+
+  return "" + month + "-" + day + "-" + year;
+}
+
 Page({
   data: {
     userInfo: "",
     hasUserInfo: false,
     canIUse: wx.canIUse('button.open-type.getUserInfo'),
     title: "UWCTA 自习打卡",
-    description: "请注意这是测试版，check in 和check out的时候名字必须完全match，邮箱为optional 可以填也可以不填，之后源表格就会变成只读状态，打卡只可以从这个小程序进行",
+    description: "打卡规则：请注意这是测试版，check in 和check out的时候名字必须完全match，邮箱为optional 可以填也可以不填，早上六点为一天开始",
     pass: false,
     passwords: "",
     name: "",

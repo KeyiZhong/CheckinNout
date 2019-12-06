@@ -4,7 +4,7 @@ const app = getApp()
 
 const odeLatitude = 47.656;
 const odeLong = -122.310;
-const tolerance = 10.001;
+const tolerance = 0.001;
 const dbName = 'check_in_check_out'
 wx.cloud.init()
 const db = wx.cloud.database()
@@ -12,6 +12,7 @@ const _ = db.command
 
 const timeGap = 3000
 
+const MILL_IN_A_DAY = 86400000
 
 function showModal(s) {
   wx.showModal({
@@ -25,17 +26,22 @@ function showModal(s) {
 function submitSelfCheckIn(name, that) {
   db.collection(dbName).where({
     name: name,
-    date: new Date().toLocaleDateString(),
     checkOutTime: ""
   }).get({
     success: function (res) {
-      if (res.data.length == 0) {
+      if(res.data.length > 0) {
+        var lastCheckIn = res.data[res.data.length - 1].checkInTime
+        var lastCheckInDate = res.data[res.data.length - 1].date
+        if (checkInTimeLegal(lastCheckIn, lastCheckInDate)) {
+          addSelfCheckinData(name, that)
+        } else {
+          wx.showModal({
+            title: '提示',
+            content: name + ' already checked in'
+          })
+        }
+      }else {
         addSelfCheckinData(name, that)
-      } else {
-        wx.showModal({
-          title: '提示',
-          content: 'Already checked in'
-        })
       }
     },
     fail: function (res) {
@@ -51,40 +57,37 @@ function addSelfCheckinData(name, that) {
   db.collection(dbName).add({
     data: {
       name: name,
-      date: new Date().toLocaleDateString(),
-      checkInTime: new Date().toLocaleString(),
+      date: new Date().toShortFormat(),
+      checkInTime: new Date(),
       checkOutTime: "",
       studyTime: 30
     },
     success: function (res) {
-      showModal(name + " Check in succeeded")
+      showModal(name + " check in succeeded")
       that.setData({
         today:true
       })
     },
     fail: function (res) {
-      showModal(name + " Check in failed")
+      showModal(name + " check in failed")
     }
   })
 }
 
 function submitSelfCheckOut(name) {
   db.collection(dbName).where({
-    name: name,
-    checkOutTime: ""
+    name: name
   }).get({
     success: function (res) {
       if(res.data.length === 0) {
         showModal(name + ' not check in');
       }else {
         var lastCheckIn = res.data[res.data.length - 1].checkInTime
-        var lastCheckInDate = new Date(lastCheckIn)
+        var lastCheckInDate = res.data[res.data.length - 1].date
+        var checkOutTime = res.data[res.data.length - 1].checkOutTime
         var id = res.data[res.data.length - 1]._id
         // 如果上次没checkout并且上一次是今天checkin 或 昨天checkin但是今天还没过六点
-        if (res.data[res.data.length - 1].checkOutTime === "" &&
-          (lastCheckInDate.toDateString() === new Date().toDateString()
-          || (lastCheckInDate.getMonth() === new Date().getMonth() && 
-          new Date().getHours() <= 6 && lastCheckInDate.getHours() >= 6))) {
+        if (checkOutTimeLegal(checkOutTime, lastCheckIn, lastCheckInDate)) {
           addCheckoutData(name, id, lastCheckIn);
         }else {
           showModal(name + ' already checked out or not check in');
@@ -101,22 +104,33 @@ function submitSelfCheckOut(name) {
 }
 
 function addCheckoutData(name, id, checkInTime) {
-  var start = new Date(checkInTime)
+  var start = checkInTime
   var end = new Date()
   var study = Math.floor((end - start) / 60000)
   db.collection(dbName).doc(id).
     update({
       data: {
-        checkOutTime: end.toLocaleString(),
+        checkOutTime: end,
         studyTime: study
       },
       success: function (res) {
-        showModal(name + " Check out succeeded")
+        showModal(name + " check out succeeded")
       },
       fail: function (res) {
-        showModal(name + " Check out failed")
+        showModal(name + " check out failed")
       }
     })
+}
+
+// 如果现在在六点以后且上次没checkout的时间在六点以前，或者如果现在在六点以前且上次没checkout的时间在昨天六点以前
+function checkInTimeLegal(lastCheckIn, lastCheckInDate) {
+  return ((new Date().getHours() >= 6 && lastCheckIn.getHours() <= 6) || (new Date().getHours() <= 6 && lastCheckIn.getHours() <= 6 && new Date(new Date().toDateString()) - new Date(lastCheckInDate) >= MILL_IN_A_DAY))
+}
+
+// 如果上次没checkout并且上一次是今天checkin 或 昨天checkin但是今天还没过六点
+function checkOutTimeLegal(checkOutTime, lastCheckIn, lastCheckInDate) {
+  return checkOutTime === "" &&
+    (lastCheckInDate === new Date().toShortFormat() || (new Date(new Date().toDateString()) - new Date(lastCheckInDate) === MILL_IN_A_DAY && new Date().getHours() <= 6 && lastCheckIn.getHours() >= 6))
 }
 
 function throttle(func, gapTime) {
